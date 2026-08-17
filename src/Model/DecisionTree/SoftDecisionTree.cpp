@@ -18,7 +18,8 @@ void SoftDecisionTree::train(InstanceList &trainSet, Parameter *parameters) {
         classLabelIndexMap[classLabels[i]] = i;
     }
     auto partition = Partition(trainSet, ((LinearPerceptronParameter*) parameters)->getCrossValidationRatio(), parameters->getSeed(), true);
-    ((SoftDecisionNode*) root)->createSoftDecisionTree(*partition.get(0), *partition.get(1), (SoftDecisionTreeParameter*) parameters, classLabelIndexMap);
+    SoftDecisionTreeParameter* softDecisionTreeParameter = (SoftDecisionTreeParameter*) parameters;
+    ((SoftDecisionNode*) root)->createSoftDecisionTree(*partition.get(0), *partition.get(1), softDecisionTreeParameter, classLabelIndexMap, softDecisionTreeParameter->n, softDecisionTreeParameter->p, softDecisionTreeParameter->id);
 }
 
 string SoftDecisionTree::predict(Instance* instance) {

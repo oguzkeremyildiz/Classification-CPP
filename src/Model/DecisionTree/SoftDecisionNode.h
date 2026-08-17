@@ -20,15 +20,18 @@ private:
     /*! If the decision tree is a soft decision tree, this is weight of the node*/
     double weight;
     SoftDecisionNode* parent;
-    bool findBestSoftDecisionTreeSplit(const InstanceList& cvData, InstanceList & data, SoftDecisionTreeParameter* parameter, const unordered_map<string, int>& classLabelIndexMap);
+    bool findBestSoftDecisionTreeSplit(const InstanceList& cvData, InstanceList & data, SoftDecisionTreeParameter* parameter, const unordered_map<string, int>& classLabelIndexMap, int n, int p, int id);
     void gradientDescentSoftDecisionTree(SoftDecisionNode *root, InstanceList *data, SoftDecisionTreeParameter *parameter, double eta, const unordered_map<string, int>& classLabelIndexMap);
     void copyTo(SoftDecisionNode* node);
     int errorOfSoftDecisionTree(SoftDecisionNode *node, const InstanceList &data, const unordered_map<string, int>& classLabelIndexMap);
     SoftDecisionNode* createNode(const InstanceList& data);
+
+    double *convert(std::vector<double> v);
+
 public:
     std::vector<double> calculateOutput(SoftDecisionNode* node, const Instance& data);
     explicit SoftDecisionNode(SoftDecisionNode* parent, const InstanceList& trainData);
-    void createSoftDecisionTree(const InstanceList& cvData, InstanceList & trainData, SoftDecisionTreeParameter* parameter, const unordered_map<string, int>& classLabelIndexMap);
+    void createSoftDecisionTree(const InstanceList& cvData, InstanceList & trainData, SoftDecisionTreeParameter* parameter, const unordered_map<string, int>& classLabelIndexMap, int n, int p, int id);
     SoftDecisionNode() = default;
     ~SoftDecisionNode();
 };

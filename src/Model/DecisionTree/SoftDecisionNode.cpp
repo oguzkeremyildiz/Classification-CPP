@@ -5,6 +5,7 @@
 #include "SoftDecisionNode.h"
 #include <cmath>
 #include <iostream>
+#include <mpi.h>
 #include <unordered_map>
 
 #include "../../Attribute/ContinuousAttribute.h"
@@ -41,10 +42,10 @@ SoftDecisionNode::SoftDecisionNode(SoftDecisionNode* parent, const InstanceList&
     weight = 0.0;
 }
 
-void SoftDecisionNode::createSoftDecisionTree(const InstanceList& cvData, InstanceList& trainData, SoftDecisionTreeParameter* parameter, const unordered_map<string, int>& classLabelIndexMap) {
-    if (findBestSoftDecisionTreeSplit(cvData, trainData, parameter, classLabelIndexMap)) {
-        ((SoftDecisionNode*) this->children.at(0))->createSoftDecisionTree(cvData, trainData, parameter, classLabelIndexMap);
-        ((SoftDecisionNode*) this->children.at(1))->createSoftDecisionTree(cvData, trainData, parameter, classLabelIndexMap);
+void SoftDecisionNode::createSoftDecisionTree(const InstanceList& cvData, InstanceList& trainData, SoftDecisionTreeParameter* parameter, const unordered_map<string, int>& classLabelIndexMap, int n, int p, int id) {
+    if (findBestSoftDecisionTreeSplit(cvData, trainData, parameter, classLabelIndexMap, n, p, id)) {
+        ((SoftDecisionNode*) this->children.at(0))->createSoftDecisionTree(cvData, trainData, parameter, classLabelIndexMap, n, p, id);
+        ((SoftDecisionNode*) this->children.at(1))->createSoftDecisionTree(cvData, trainData, parameter, classLabelIndexMap, n, p, id);
     }
 }
 
@@ -92,35 +93,93 @@ SoftDecisionNode *SoftDecisionNode::createNode(const InstanceList& data) {
     return node;
 }
 
+double* SoftDecisionNode::convert(std::vector<double> v) {
+    auto* result = new double[v.size()];
+    for (int i = 0; i < v.size(); i++) {
+        result[i] = v[i];
+    }
+    return result;
+}
 
-bool SoftDecisionNode::findBestSoftDecisionTreeSplit(const InstanceList& cvData, InstanceList& data, SoftDecisionTreeParameter* parameter, const unordered_map<string, int>& classLabelIndexMap) {
+
+bool SoftDecisionNode::findBestSoftDecisionTreeSplit(const InstanceList& cvData, InstanceList& data, SoftDecisionTreeParameter* parameter, const unordered_map<string, int>& classLabelIndexMap, int n, int p, int id) {
     auto tmp = vector(w0s);
     auto root = this;
     while (root->parent != nullptr) {
         root = root->parent;
     }
+    int performanceNow;
     auto performanceBefore = errorOfSoftDecisionTree(root, cvData, classLabelIndexMap);
     this->children = std::vector<DecisionNode*>();
     this->children.push_back(new SoftDecisionNode(this, data));
     this->children.push_back(new SoftDecisionNode(this, data));
     auto* bestNode = createNode(data);
     auto* tmpNode = createNode(data);
+    double* w;
+    double* w0sLeft;
+    double* w0sRight;
     this->copyTo(tmpNode);
     int performanceBest = INT_MAX;
     bool result = true;
-    int denominator = 1;
-    for (int i = 0; i <= 10; i++) {
-        const double eta = 10.0 / denominator;
+    for (int i = 0; i < n / p; i++) {
+        const double eta = 10.0 / pow(2, n / p * id + i);
         gradientDescentSoftDecisionTree(root, &data, parameter, eta, classLabelIndexMap);
-        int performanceNow = errorOfSoftDecisionTree(root, cvData, classLabelIndexMap);
+        performanceNow = errorOfSoftDecisionTree(root, cvData, classLabelIndexMap);
         if (performanceNow < performanceBest) {
             performanceBest = performanceNow;
             this->copyTo(bestNode);
         }
         tmpNode->copyTo(this);
-        denominator *= 2;
     }
-    if (performanceBefore <= performanceBest) {
+    int performanceBestGlobal = performanceBest;
+    if (p > 1) {
+        if (id != 0) {
+            MPI_Send(&performanceBest, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            w = convert(this->w);
+            MPI_Send(w, data.get(0)->attributeSize() + 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+            delete [] w;
+            w0sLeft = convert(((SoftDecisionNode*)this->children.at(0))->w0s);
+            MPI_Send(w0sLeft, classLabelIndexMap.size(), MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
+            delete [] w0sLeft;
+            w0sRight = convert(((SoftDecisionNode*)this->children.at(1))->w0s);
+            MPI_Send(w0sRight, classLabelIndexMap.size(), MPI_DOUBLE, 0, 3, MPI_COMM_WORLD);
+            delete [] w0sRight;
+            MPI_Bcast(&performanceBestGlobal, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(bestNode->w.data(), data.get(0)->attributeSize() + 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Bcast(((SoftDecisionNode*)bestNode->children.at(0))->w0s.data(), classLabelIndexMap.size(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Bcast(((SoftDecisionNode*)bestNode->children.at(1))->w0s.data(), classLabelIndexMap.size(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        } else {
+            w = new double[data.get(0)->attributeSize() + 1];
+            w0sLeft = new double[classLabelIndexMap.size()];
+            w0sRight = new double[classLabelIndexMap.size()];
+            for (int i = 1; i < p; i++) {
+                int otherPerf;
+                MPI_Recv(&otherPerf, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Recv(w, data.get(0)->attributeSize() + 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Recv(w0sLeft, classLabelIndexMap.size(), MPI_DOUBLE, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Recv(w0sRight, classLabelIndexMap.size(), MPI_DOUBLE, i, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                if (otherPerf < performanceBest) {
+                    performanceBest = otherPerf;
+                    for (int j = 0; j < data.get(0)->attributeSize() + 1; j++) {
+                        bestNode->w[j] = w[j];
+                    }
+                    for (int j = 0; j < classLabelIndexMap.size(); j++) {
+                        ((SoftDecisionNode*)bestNode->children.at(0))->w0s[j] = w0sLeft[j];
+                        ((SoftDecisionNode*)bestNode->children.at(1))->w0s[j] = w0sRight[j];
+                    }
+                }
+            }
+            delete [] w;
+            delete [] w0sLeft;
+            delete [] w0sRight;
+            performanceBestGlobal = performanceBest;
+            MPI_Bcast(&performanceBestGlobal, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(bestNode->w.data(), data.get(0)->attributeSize() + 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Bcast(((SoftDecisionNode*)bestNode->children.at(0))->w0s.data(), classLabelIndexMap.size(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Bcast(((SoftDecisionNode*)bestNode->children.at(1))->w0s.data(), classLabelIndexMap.size(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        }
+    }
+    if (performanceBefore <= performanceBestGlobal) {
         result = false;
         this->children.clear();
         this->w0s = vector(tmp);

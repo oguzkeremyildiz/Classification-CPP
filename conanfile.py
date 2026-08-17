@@ -8,7 +8,7 @@ from conan.tools.files import copy
 class ClassificationConan(ConanFile):
     name = "classification"
     version = "1.0.0"
-    requires = ["dictionary/1.0.0", "sampling/1.0.0", "data_structure/1.0.0", "util/1.0.0", "math/1.0.0"]
+    requires = ["dictionary/1.0.0", "sampling/1.0.0", "data_structure/1.0.0", "util/1.0.0", "math/1.0.0", "openmpi/4.1.6"]
     license = "GPL License"
     author = "Olcay Taner Yildiz olcay.yildiz@ozyegin.edu.tr"
     url = "https://github.com/StarlangSoftware/Classification-CPP"

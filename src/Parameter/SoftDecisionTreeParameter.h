@@ -11,8 +11,11 @@ class SoftDecisionTreeParameter : public LinearPerceptronParameter {
 private:
     double alpha;
 public:
-    SoftDecisionTreeParameter(int seed, double learningRate, double etaDecrease, double crossValidationRatio, int epoch, double alpha);
+    SoftDecisionTreeParameter(int seed, double learningRate, double etaDecrease, double crossValidationRatio, int epoch, double alpha, int n, int p, int id);
     double getAlpha() const;
+    int n;
+    int p;
+    int id;
 };
 
 
