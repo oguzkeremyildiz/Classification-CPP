@@ -1,7 +1,16 @@
 cmake_minimum_required(VERSION 3.12)
 project(Classification)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_FLAGS "-O3")
 set(CMAKE_CXX_COMPILER mpicxx)
+
+# Parallelization scheme of the soft decision tree: NF (node farm), RP (rate parallel) or DP (data parallel).
+set(SCHEME "NF" CACHE STRING "Parallelization scheme of the soft decision tree: NF, RP or DP")
+set_property(CACHE SCHEME PROPERTY STRINGS NF RP DP)
+if(NOT SCHEME MATCHES "^(NF|RP|DP)$")
+    message(FATAL_ERROR "SCHEME must be NF, RP or DP (got '${SCHEME}')")
+endif()
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/Model/DecisionTree/Parallel/${SCHEME})
 
 find_package(dictionary REQUIRED)
 find_package(sampling REQUIRED)
@@ -19,8 +28,8 @@ add_library(Classification src/Attribute/AttributeType.h src/Attribute/Attribute
         src/Model/Ensemble/RandomForestModel.h
         src/Model/DecisionTree/SoftDecisionTree.h
         src/Model/DecisionTree/SoftDecisionTree.cpp
-        src/Model/DecisionTree/SoftDecisionNode.h
-        src/Model/DecisionTree/SoftDecisionNode.cpp
+        src/Model/DecisionTree/Parallel/${SCHEME}/SoftDecisionNode.h
+        src/Model/DecisionTree/Parallel/${SCHEME}/SoftDecisionNode.cpp
         src/Parameter/SoftDecisionTreeParameter.h
         src/Parameter/SoftDecisionTreeParameter.cpp)
 target_link_libraries(Classification dictionary::dictionary sampling::sampling data_structure::data_structure util::util openmpi::openmpi)
@@ -43,11 +52,9 @@ add_executable(Main src/Attribute/AttributeType.h src/Attribute/Attribute.h src/
         src/Model/Ensemble/RandomForestModel.h
         src/Model/DecisionTree/SoftDecisionTree.h
         src/Model/DecisionTree/SoftDecisionTree.cpp
-        src/Model/DecisionTree/SoftDecisionNode.h
-        src/Model/DecisionTree/SoftDecisionNode.cpp
+        src/Model/DecisionTree/Parallel/${SCHEME}/SoftDecisionNode.h
+        src/Model/DecisionTree/Parallel/${SCHEME}/SoftDecisionNode.cpp
         src/Parameter/SoftDecisionTreeParameter.h
         src/Parameter/SoftDecisionTreeParameter.cpp
         src/main.cpp)
 target_link_libraries(Main dictionary::dictionary sampling::sampling data_structure::data_structure util::util openmpi::openmpi)
-add_executable(DummyMain src/dummymain.cpp)
-target_link_libraries(DummyMain openmpi::openmpi)

@@ -6,8 +6,8 @@
 #define CLASSIFICATION_SOFTDECISIONNODE_H
 #include <unordered_map>
 
-#include "DecisionNode.h"
-#include "../../Parameter/SoftDecisionTreeParameter.h"
+#include "../../DecisionNode.h"
+#include "../../../../Parameter/SoftDecisionTreeParameter.h"
 
 
 class SoftDecisionNode : public DecisionNode {

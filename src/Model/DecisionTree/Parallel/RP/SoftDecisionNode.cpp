@@ -8,8 +8,8 @@
 #include <mpi.h>
 #include <unordered_map>
 
-#include "../../Attribute/ContinuousAttribute.h"
-#include "../../Parameter/SoftDecisionTreeParameter.h"
+#include "../../../../Attribute/ContinuousAttribute.h"
+#include "../../../../Parameter/SoftDecisionTreeParameter.h"
 
 inline bool kroneckerDelta(const int& r, const int& k) {
     return r == k;
