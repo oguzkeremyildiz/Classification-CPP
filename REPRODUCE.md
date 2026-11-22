@@ -60,3 +60,17 @@ For every data set the driver prints the error rate and the induction time in se
 ## Reproducibility
 
 The tree induced by NF does not depend on p. RP and DP do depend on p: RP changes the order in which the training instances are visited, DP averages the parameters of p partial models after every epoch. The tree is therefore not identical across p for these two schemes.
+
+## Results in the paper
+
+The results in the paper were produced on the Özyeğin University cluster (Linux), on one exclusive node, with `mpirun -np p ./Main`. The sources that were run there are the ones in this repository:
+
+| Scheme | Source | Driver |
+|---|---|---|
+| NF | `src/Model/DecisionTree/Parallel/NF/` | `experiments/main_NF_RP.cpp` |
+| RP | `src/Model/DecisionTree/Parallel/RP/` (the `SoftDecisionNode` committed as 6a69bc8) | `experiments/main_NF_RP.cpp` |
+| DP | `src/Model/DecisionTree/Parallel/DP/` | `experiments/main_DP.cpp` |
+
+The two drivers are the ones that were run. To build one of them exactly as it was run, copy it over `src/main.cpp`. `src/main.cpp` itself is an equivalent driver with the same parameters that can also select data sets.
+
+The initial weights are drawn with `rand()` and the instance order is produced by `std::shuffle`. Both differ between operating systems and standard libraries. For a given seed the tree is reproducible on the same platform, but not across platforms: the error rates obtained on macOS differ from those obtained on Linux.
