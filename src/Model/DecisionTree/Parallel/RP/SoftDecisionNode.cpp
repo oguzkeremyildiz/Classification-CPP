@@ -135,13 +135,13 @@ bool SoftDecisionNode::findBestSoftDecisionTreeSplit(const InstanceList& cvData,
     if (p > 1) {
         if (id != 0) {
             MPI_Send(&performanceBest, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-            w = convert(this->w);
+            w = convert(bestNode->w);
             MPI_Send(w, data.get(0)->attributeSize() + 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
             delete [] w;
-            w0sLeft = convert(((SoftDecisionNode*)this->children.at(0))->w0s);
+            w0sLeft = convert(((SoftDecisionNode*)bestNode->children.at(0))->w0s);
             MPI_Send(w0sLeft, classLabelIndexMap.size(), MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
             delete [] w0sLeft;
-            w0sRight = convert(((SoftDecisionNode*)this->children.at(1))->w0s);
+            w0sRight = convert(((SoftDecisionNode*)bestNode->children.at(1))->w0s);
             MPI_Send(w0sRight, classLabelIndexMap.size(), MPI_DOUBLE, 0, 3, MPI_COMM_WORLD);
             delete [] w0sRight;
             MPI_Bcast(&performanceBestGlobal, 1, MPI_INT, 0, MPI_COMM_WORLD);

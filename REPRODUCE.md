@@ -68,9 +68,13 @@ The results in the paper were produced on the Özyeğin University cluster (Linu
 | Scheme | Source | Driver |
 |---|---|---|
 | NF | `src/Model/DecisionTree/Parallel/NF/` | `experiments/main_NF_RP.cpp` |
-| RP | `src/Model/DecisionTree/Parallel/RP/` (the `SoftDecisionNode` committed as 6a69bc8) | `experiments/main_NF_RP.cpp` |
+| RP | `src/Model/DecisionTree/Parallel/RP/` | `experiments/main_NF_RP.cpp` |
 | DP | `src/Model/DecisionTree/Parallel/DP/` | `experiments/main_DP.cpp` |
 
+In `RP`, the processes other than rank 0 send the parameters of their best rate (`bestNode`) to rank 0. The first version of this file (commit b860de4, taken unchanged from 6a69bc8) sent the parameters the node held after the rate loop, which had been restored to the starting values, so rank 0 could adopt untrained parameters whenever the winning rate was not on rank 0. The RP results in the paper were obtained with the corrected version in this repository, with p = 2, 4, 8 and 16.
+
 The two drivers are the ones that were run. To build one of them exactly as it was run, copy it over `src/main.cpp`. `src/main.cpp` itself is an equivalent driver with the same parameters that can also select data sets.
+
+In all three variants the update of the gating vector uses the cached `outputs` of the two children (small random vectors drawn in the constructor) in place of the difference of their output vectors `w0s`. The trees are therefore fitted by this procedure and not by exact gradient descent. The paper describes this in its Section 3.1 and its limitations, and the results in the paper were obtained with it.
 
 The initial weights are drawn with `rand()` and the instance order is produced by `std::shuffle`. Both differ between operating systems and standard libraries. For a given seed the tree is reproducible on the same platform, but not across platforms: the error rates obtained on macOS differ from those obtained on Linux.
